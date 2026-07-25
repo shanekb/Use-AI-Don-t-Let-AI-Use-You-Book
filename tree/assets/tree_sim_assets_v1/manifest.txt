@@ -1,0 +1,41 @@
+tree_sim_assets_v1 — generated in Blender 5.2 (procedural, real-time friendly)
+All tileable textures are seamless. sRGB for color, linear for normal/rough.
+Bark set ships separately (bark_maple_assets.zip).
+
+pond/water_normal.png — tiling water ripple normal map (scroll two copies for movement)
+pond/ripple_ring.png — expanding rain-hit ripple (scale up + fade out in code)
+rain/rain_streak.png — soft vertical rain streak for particles
+rain/rain_splash.png — ground/water splash crown + droplets (spawn on impact)
+snow/snow_flake_soft.png — big soft fluffy flake (slow float)
+snow/snow_flake_fine.png — fine small flake (fast drift, dense)
+snow/snow_ground.png — tileable snow cover with sparkle for ground overlay
+clouds/cloud_cumulus.png — fair-weather cumulus billboard
+clouds/cloud_nimbus.png — gray rain nimbus billboard
+clouds/cloud_nimbus_dark.png — dark thunderstorm billboard
+moon/moon_full.png — full moon
+moon/moon_waxing_gibbous.png — waxing gibbous (lit right)
+moon/moon_first_quarter.png — first quarter (right half)
+moon/moon_waxing_crescent.png — waxing crescent (right sliver)
+moon/moon_new.png — new moon (earthshine only)
+moon/moon_waning_crescent.png — waning crescent (left sliver)
+moon/moon_last_quarter.png — last quarter (left half)
+moon/moon_waning_gibbous.png — waning gibbous (lit left)
+sky/starmap_dense.png — equirect dense star dome (normal clear nights)
+sky/starmap_milkyway.png — milky way band version for Deep Clear nights
+sky/star_point.png — soft glowing point sprite for particle stars
+sky/shooting_star_streak.png — long soft streak, bright end = head (orient along velocity)
+sky/meteor_head.png — bright meteor head glow
+leaves/leaf_maple_spring.png — fresh light green (spring)
+leaves/leaf_maple_summer.png — deep green (summer)
+leaves/leaf_maple_fall_orange.png — fall orange
+leaves/leaf_maple_fall_red.png — fall red
+leaves/leaf_maple_fall_yellow.png — fall yellow
+leaves/leaf_maple_dead.png — dry dead brown (winter leftovers)
+leaves/leaf_maple_normal.png — shared normal map for all maple leaf cards
+ground/ground_dirt.png — tileable dirt/grass-dirt ground
+ground/ground_dirt_normal.png — normal map for ground_dirt
+ground/ground_snow_overlay.png — patchy snow dusting overlay (alpha = coverage)
+pond/pond.glb — irregular pond basin + separate transparent water surface (~300 tris)
+optional/hills.glb — 4 modular low-poly distant hills (~256 tris each), tint per season in code
+snow/snow_pile.glb — small snow mound for tree base / pond edge
+moon/moon.glb — UV sphere with moon material — swap the texture by phase in code
