@@ -423,7 +423,7 @@ for(let i=0;i<STAR_COUNT;i++){
   starPos[i*3+2]=r*Math.sin(phi)*Math.sin(theta);
 }
 const starGeo=new THREE.BufferGeometry(); starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
-const starMat=new THREE.PointsMaterial({color:0xffffff,size:0.32,transparent:true,opacity:0,depthWrite:false,sizeAttenuation:true});
+const starMat=new THREE.PointsMaterial({color:0xffffff,size:2.2,transparent:true,opacity:0,depthWrite:false,sizeAttenuation:false,blending:THREE.AdditiveBlending});
 stars=new THREE.Points(starGeo,starMat); scene.add(stars);
 
 // Shooting stars
@@ -909,10 +909,10 @@ function makeParticles(count,color,size,speedY,spread=36){
 rainSys=makeParticles(2200,0xbcd6f5,0.048,-0.27,140);
 if (rainStreakTex) { rainSys.material.map = rainStreakTex; rainSys.material.color.setHex(0xffffff); rainSys.material.opacity = 0.75; rainSys.material.needsUpdate = true; }
 
-snowBigSys=makeParticles(1400,0xffffff,0.14,-0.022,140);
+snowBigSys=makeParticles(2800,0xffffff,0.22,-0.028,160);
 if (snowSoftTex) { snowBigSys.material.map = snowSoftTex; snowBigSys.material.transparent = true; snowBigSys.material.alphaTest = 0.05; snowBigSys.material.needsUpdate = true; }
 
-snowSmallSys=makeParticles(3500,0xf8fafc,0.038,-0.065,90);
+snowSmallSys=makeParticles(7000,0xf8fafc,0.06,-0.09,150);
 if (snowFineTex) { snowSmallSys.material.map = snowFineTex; snowSmallSys.material.transparent = true; snowSmallSys.material.alphaTest = 0.05; snowSmallSys.material.needsUpdate = true; }
 
 // Morning mist – very fine, dense, background only
@@ -924,9 +924,17 @@ mistSys.material.transparent = true;
 function tickParticles(sys,str,extraY=1){
   if(!sys || !sys.visible)return;
   const arr=sys.geometry.attributes.position.array, vel=sys.userData.vel;
+  const drift = sys.userData.drift || 1;
+  const spread = 70;
   for(let i=0;i<vel.length;i++){
-    arr[i*3]+=vel[i].x*str; arr[i*3+1]+=vel[i].y*extraY;
-    if(arr[i*3+1]<0){arr[i*3+1]=15+Math.random()*6; arr[i*3]=(Math.random()-0.5)*36; arr[i*3+2]=(Math.random()-0.5)*36;}
+    arr[i*3]+=vel[i].x*str*drift*1.8;
+    arr[i*3+1]+=vel[i].y*extraY;
+    arr[i*3+2]+=(vel[i].x*0.4)*str*drift;
+    if(arr[i*3+1]<0){
+      arr[i*3+1]=12+Math.random()*18;
+      arr[i*3]=(Math.random()-0.5)*spread;
+      arr[i*3+2]=(Math.random()-0.5)*spread;
+    }
   }
   sys.geometry.attributes.position.needsUpdate=true;
 }
@@ -993,10 +1001,16 @@ function updateAtmosphere(){
     const phaseNames = ['new','waxing_crescent','first_quarter','waxing_gibbous','full','waning_gibbous','last_quarter','waning_crescent'];
     const idx = Math.min(7, Math.floor(lunarPhase * 8)) % 8;
     const tex = moonPhaseTex[phaseNames[idx]];
-    if (tex && moonMesh.material.map !== tex) {
-      moonMesh.material.map = tex;
+    if (tex) {
+      if (moonMesh.material.map !== tex) {
+        moonMesh.material.map = tex;
+        moonMesh.material.needsUpdate = true;
+      }
       moonMesh.material.color.setHex(0xffffff);
-      moonMesh.material.needsUpdate = true;
+      moonMesh.material.emissive = new THREE.Color(0x1e293b);
+      moonMesh.material.emissiveIntensity = 0.15 + moonPhaseStrength * 0.35;
+      moonMesh.material.roughness = 1;
+      moonMesh.material.metalness = 0;
     }
   }
   // Scale moon slightly with phase for visual feedback
@@ -1031,8 +1045,8 @@ function updateAtmosphere(){
     const wave3 = 0.5 + 0.5 * Math.sin(time * 0.07 + 4.2);
     const wave = (wave1 * 0.5 + wave2 * 0.3 + wave3 * 0.2);
     let base = 0.018, amplitude = 0.012;
-    if (intensityLevel === 'intense') { base = 0.038; amplitude = 0.028; }
-    if (intensityLevel === 'super')   { base = 0.055; amplitude = 0.045; }
+    if (intensityLevel === 'intense') { base = 0.055; amplitude = 0.04; }
+    if (intensityLevel === 'super')   { base = 0.085; amplitude = 0.06; }
     fogDensity += base + amplitude * wave;
   } else if (currentWeather === 'rain' || currentWeather === 'storm') {
     // Light atmospheric haze only – no white-out
@@ -1040,6 +1054,28 @@ function updateAtmosphere(){
   }
 
   scene.fog.density = fogDensity;
+  // Fog COLOR: mist/snow must not equal sky or it disappears
+  if (currentWeather === 'snow') {
+    const white = new THREE.Color(0xe8eef5);
+    const skyC = scene.background.clone();
+    const mix = intensityLevel === 'super' ? 0.82 : intensityLevel === 'intense' ? 0.65 : 0.45;
+    scene.fog.color.copy(skyC).lerp(white, mix);
+  } else if (currentWeather === 'rain' || currentWeather === 'storm') {
+    scene.fog.color.copy(scene.background).lerp(new THREE.Color(0x9ca3af), 0.35);
+  } else if (t > 4.6 && t < 9.0) {
+    // morning mist — cool pale, not pure sky
+    scene.fog.color.copy(scene.background).lerp(new THREE.Color(0xdbe4f0), 0.4);
+  } else {
+    scene.fog.color.copy(scene.background);
+  }
+  // Tree shadow fades as snow thickens (real life)
+  if (typeof sunLight !== 'undefined') {
+    if (currentWeather === 'snow') {
+      const fade = intensityLevel === 'super' ? 0.05 : intensityLevel === 'intense' ? 0.25 : 0.55;
+      sunLight.castShadow = fade > 0.15;
+      sunLight.intensity = Math.min(sunLight.intensity, 0.35 + fade * 0.5);
+    }
+  }
   // Ground snow cover
   if (typeof snowCover !== 'undefined') {
     const season = getSeason(day);
@@ -1068,7 +1104,16 @@ function updateAtmosphere(){
   rainSys.visible=(currentWeather==='rain'||currentWeather==='storm')&&weatherIntensity>0.12;
   const isSnow=currentWeather==='snow'&&weatherIntensity>0.12;
   snowBigSys.visible=isSnow;
-  snowSmallSys.visible=isSnow;  // always mix sizes
+  snowSmallSys.visible=isSnow;
+  if (isSnow) {
+    const op = intensityLevel === 'super' ? 0.95 : intensityLevel === 'intense' ? 0.85 : 0.7;
+    snowBigSys.material.opacity = op;
+    snowSmallSys.material.opacity = op * 0.9;
+    // more horizontal drift in blizzard
+    const drift = intensityLevel === 'super' ? 2.2 : intensityLevel === 'intense' ? 1.4 : 0.8;
+    snowBigSys.userData.drift = drift;
+    snowSmallSys.userData.drift = drift * 1.3;
+  }
   // Morning mist: fog does the atmosphere – particles almost gone
   const isMorningMistHours = (t >= 5.0 && t <= 8.0);
   // Only show tiny residual particles when far away, never in snow (snow has its own)
@@ -1235,9 +1280,9 @@ document.getElementById('intensityBtn').onclick=()=>{
       dayFactor = Math.pow(Math.max(0, dayFactor), 0.82);
     }
     if (currentWeather === 'clear' && dayFactor < 0.35) {
-      if (intensityLevel === 'super') { starMat.opacity = 1; starMat.size = 0.52; }
-      else if (intensityLevel === 'intense') { starMat.opacity = 0.95; starMat.size = 0.38; }
-      else { starMat.opacity = 0.75; starMat.size = 0.28; }
+      if (intensityLevel === 'super') { starMat.opacity = 1; starMat.size = 3.2; }
+      else if (intensityLevel === 'intense') { starMat.opacity = 0.95; starMat.size = 2.6; }
+      else { starMat.opacity = 0.8; starMat.size = 2.1; }
     }
   }
 };
@@ -1282,7 +1327,8 @@ function animate(){
     const old = groundLeafMeshes.shift();
     if (old) scene.remove(old);
   }
-  updateFalling(dt); updateShootingStars(dt); updateTreeScale(); updateLabels();
+  updateFalling(dt); updateShootingStars(dt); updateTreeScale(); if(typeof updateBookLeaf==='function')updateBookLeaf(dt); updateLabels();
+  if (stars) stars.position.copy(camera.position);
   renderer.render(scene,camera);
 }
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
